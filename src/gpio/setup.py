@@ -1,41 +1,42 @@
-import RPi.GPIO as gpio
+import RPi.GPIO as GPIO
 
 # GPIO Modelo 1
 LED0: int = 17
 LED1: int = 18
 LED2: int = 23
+LEDS = [LED0, LED1, LED2]
 
 BOTP_M1: int = 1
 BOTC_M1: int = 12
+BOTSM1 = [BOTP_M1, BOTC_M1]
 
 # GPIO Modelo 2
 SEM0: int = 24
 SEM1: int = 8
 SEM2: int = 7
+SEMS = [SEM0, SEM1, SEM2]
 
 BOTP_M2: int = 25
 BOTC_M2: int = 22
+BOTSM2 = [BOTP_M2, BOTC_M2]
 
 
 def setup_mod1():
-    gpio.output(LED0, gpio.LOW)
-    gpio.output(LED1, gpio.LOW)
-    gpio.output(LED2, gpio.LOW)
+    GPIO.setup(LEDS, GPIO.OUT)
+    GPIO.output(LEDS, GPIO.LOW)
 
-    gpio.input(BOTP_M1)
-    gpio.input(BOTC_M1)
+    GPIO.setup(BOTSM1, GPIO.IN, GPIO.PUD_DOWN)
 
 
 def setup_mod2():
-    gpio.output(SEM0, gpio.LOW)
-    gpio.output(SEM1, gpio.LOW)
-    gpio.output(SEM2, gpio.LOW)
+    GPIO.setup(SEMS, GPIO.OUT)
+    GPIO.output(SEMS, GPIO.LOW)
 
-    gpio.input(BOTP_M2)
-    gpio.input(BOTC_M2)
+    GPIO.setup(BOTSM2, GPIO.IN, GPIO.PUD_DOWN)
 
 
-def setup_gpio():
-    gpio.setmode(gpio.BCM)
+def setup_GPIO():
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
     setup_mod1()
     setup_mod2()
