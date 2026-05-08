@@ -21,7 +21,7 @@ def main():
             time.sleep(1)
 
     except KeyboardInterrupt:
-        print("\n[!] Encerrando todos os semáforos (Ctrl+C detectado)...")
+        print("\n[!] Encerrando todos os semáforos")
 
     finally:
         GPIO.cleanup()

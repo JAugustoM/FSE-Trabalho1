@@ -1,7 +1,9 @@
+import threading
 from time import sleep, time
 
 import RPi.GPIO as GPIO
-from setup import BOTC_M2, BOTP_M2, SEM0, SEM1, SEM2
+
+from .setup import BOTC_M2, BOTP_M2, SEM0, SEM1, SEM2
 
 
 class SemaforoCruzamento:
@@ -9,32 +11,31 @@ class SemaforoCruzamento:
         self.pedido_ped_prin = False
         self.pedido_ped_cruz = False
 
-        self.config_callback()
-
-    def config_callback(self):
-        """Configura as interrupções dos botões com debounce de 200ms"""
-        GPIO.add_event_detect(
-            BOTP_M2,
-            GPIO.RISING,
-            callback=self.callback_ped_prin,
-            bouncetime=200,
+        self.thread_monitoramento = threading.Thread(
+            target=self.monitorar_botoes, daemon=True
         )
-        GPIO.add_event_detect(
-            BOTC_M2,
-            GPIO.RISING,
-            callback=self.callback_ped_cruz,
-            bouncetime=200,
-        )
+        self.thread_monitoramento.start()
 
-    def callback_ped_prin(self, channel):
-        """Callback executado quando o botão do Pedestre Principal é pressionado."""
-        print("\n[!] Botão Pedestre Principal pressionado!")
-        self.pedido_ped_prin = True
+    def monitorar_botoes(self):
+        estado_anterior_prin = GPIO.LOW
+        estado_anterior_cruz = GPIO.LOW
 
-    def callback_ped_cruz(self, channel):
-        """Callback executado quando o botão do Pedestre Cruzamento é pressionado."""
-        print("\n[!] Botão Pedestre Cruzamento pressionado!")
-        self.pedido_ped_cruz = True
+        while True:
+            estado_atual_prin = GPIO.input(BOTP_M2)
+            estado_atual_cruz = GPIO.input(BOTC_M2)
+
+            if estado_atual_prin == GPIO.HIGH and estado_anterior_prin == GPIO.LOW:
+                print("\n[!] Botão Pedestre Principal pressionado!")
+                self.pedido_ped_prin = True
+
+            if estado_atual_cruz == GPIO.HIGH and estado_anterior_cruz == GPIO.LOW:
+                print("\n[!] Botão Pedestre Cruzamento pressionado!")
+                self.pedido_ped_cruz = True
+
+            estado_anterior_prin = estado_atual_prin
+            estado_anterior_cruz = estado_atual_cruz
+
+            sleep(0.2)
 
     def enviar_codigo_3bits(self, estado):
         """Converte o estado (número inteiro) em 3 bits e envia para os pinos GPIO."""
@@ -42,9 +43,7 @@ class SemaforoCruzamento:
         b1 = (estado >> 1) & 1
         b2 = (estado >> 2) & 1
 
-        GPIO.output(SEM0, b0)
-        GPIO.output(SEM1, b1)
-        GPIO.output(SEM2, b2)
+        GPIO.output([SEM0, SEM1, SEM2], [b0, b1, b2])
 
         print(f"\n--- ESTADO ATUAL: {estado} (Bits: {b2}{b1}{b0}) ---")
 
@@ -58,7 +57,7 @@ class SemaforoCruzamento:
             if checar_pedido():
                 print(" -> Sinal verde interrompido pelo pedestre!")
                 break
-            sleep(0.1)  # Pausa curta para não sobrecarregar a CPU do Raspberry Pi
+            sleep(0.1)
 
     def executar_ciclo(self):
         while True:
@@ -68,24 +67,29 @@ class SemaforoCruzamento:
             print("Via Principal: VERDE | Via Cruzamento: VERMELHO")
             sleep(10)
             self.esperar_tempo_variavel(10, lambda: self.pedido_ped_prin)
+
             # ESTADO 2 (Amarelo Principal)
             self.enviar_codigo_3bits(2)
             print("Via Principal: AMARELO | Via Cruzamento: VERMELHO")
             sleep(2)
+
             # ESTADO 4 (Vermelho Total)
             self.enviar_codigo_3bits(4)
             print("Via Principal: VERMELHO | Via Cruzamento: VERMELHO")
             sleep(2)
+
             # ESTADO 5 (Vermelho Principal / Verde Cruzamento)
             self.enviar_codigo_3bits(5)
             self.pedido_ped_prin = False
             print("Via Principal: VERMELHO | Via Cruzamento: VERDE")
             sleep(5)
             self.esperar_tempo_variavel(5, lambda: self.pedido_ped_cruz)
+
             # ESTADO 6 (Amarelo Cruzamento)
             self.enviar_codigo_3bits(6)
             print("Via Principal: VERMELHO | Via Cruzamento: AMARELO")
             sleep(2)
+
             # ESTADO 4 (Vermelho Total)
             self.enviar_codigo_3bits(4)
             print("Via Principal: VERMELHO | Via Cruzamento: VERMELHO")
