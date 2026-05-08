@@ -5,9 +5,17 @@ Fundamentos de Sistemas Embarcados, ministrada em 2026/1.
 
 ## Requisitos
 
-Para rodar o projeto instale as bibliotecas usadas no projeto com o comando
+Antes de rodar o projeto instale as bibliotecas usadas no projeto com o comando
 abaixo.
 
-```shell
+```sh
 pip install -r requirements.txt
+```
+
+## Execução
+
+Para rodar o projeto use o comando abaixo.
+
+```sh
+python src/main.py
 ```
