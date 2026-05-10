@@ -13,8 +13,7 @@ class SemaforoCruzamento:
 
         self.thread_monitoramento = threading.Thread(
             target=self.monitorar_botoes, daemon=True
-        )
-        self.thread_monitoramento.start()
+        ).start()
 
     def monitorar_botoes(self):
         estado_anterior_prin = GPIO.LOW
@@ -25,11 +24,11 @@ class SemaforoCruzamento:
             estado_atual_cruz = GPIO.input(BOTC_M2)
 
             if estado_atual_prin == GPIO.HIGH and estado_anterior_prin == GPIO.LOW:
-                print("\n[!] Botão Pedestre Principal pressionado!")
+                print("\n[M2] Botão Pedestre Principal pressionado!")
                 self.pedido_ped_prin = True
 
             if estado_atual_cruz == GPIO.HIGH and estado_anterior_cruz == GPIO.LOW:
-                print("\n[!] Botão Pedestre Cruzamento pressionado!")
+                print("\n[M2] Botão Pedestre Cruzamento pressionado!")
                 self.pedido_ped_cruz = True
 
             estado_anterior_prin = estado_atual_prin
@@ -45,7 +44,7 @@ class SemaforoCruzamento:
 
         GPIO.output([SEM0, SEM1, SEM2], [b0, b1, b2])
 
-        print(f"\n--- ESTADO ATUAL: {estado} (Bits: {b2}{b1}{b0}) ---")
+        print(f"\n[M2] ESTADO ATUAL: {estado} (Bits: {b2}{b1}{b0}) ---")
 
     def esperar_tempo_variavel(self, tempo_maximo, checar_pedido):
         """
@@ -55,7 +54,7 @@ class SemaforoCruzamento:
         inicio = time()
         while (time() - inicio) < tempo_maximo:
             if checar_pedido():
-                print(" -> Sinal verde interrompido pelo pedestre!")
+                print("[M2] Sinal verde interrompido pelo pedestre!")
                 break
             sleep(0.1)
 
@@ -64,33 +63,33 @@ class SemaforoCruzamento:
             # ESTADO 1 (Verde Principal / Vermelho Cruzamento)
             self.enviar_codigo_3bits(1)
             self.pedido_ped_cruz = False
-            print("Via Principal: VERDE | Via Cruzamento: VERMELHO")
+            print("[M2] Via Principal: VERDE | Via Cruzamento: VERMELHO")
             sleep(10)
             self.esperar_tempo_variavel(10, lambda: self.pedido_ped_prin)
 
             # ESTADO 2 (Amarelo Principal)
             self.enviar_codigo_3bits(2)
-            print("Via Principal: AMARELO | Via Cruzamento: VERMELHO")
+            print("[M2] Via Principal: AMARELO | Via Cruzamento: VERMELHO")
             sleep(2)
 
             # ESTADO 4 (Vermelho Total)
             self.enviar_codigo_3bits(4)
-            print("Via Principal: VERMELHO | Via Cruzamento: VERMELHO")
+            print("[M2] Via Principal: VERMELHO | Via Cruzamento: VERMELHO")
             sleep(2)
 
             # ESTADO 5 (Vermelho Principal / Verde Cruzamento)
             self.enviar_codigo_3bits(5)
             self.pedido_ped_prin = False
-            print("Via Principal: VERMELHO | Via Cruzamento: VERDE")
+            print("[M2] Via Principal: VERMELHO | Via Cruzamento: VERDE")
             sleep(5)
             self.esperar_tempo_variavel(5, lambda: self.pedido_ped_cruz)
 
             # ESTADO 6 (Amarelo Cruzamento)
             self.enviar_codigo_3bits(6)
-            print("Via Principal: VERMELHO | Via Cruzamento: AMARELO")
+            print("[M2] Via Principal: VERMELHO | Via Cruzamento: AMARELO")
             sleep(2)
 
             # ESTADO 4 (Vermelho Total)
             self.enviar_codigo_3bits(4)
-            print("Via Principal: VERMELHO | Via Cruzamento: VERMELHO")
+            print("[M2] Via Principal: VERMELHO | Via Cruzamento: VERMELHO")
             sleep(2)
