@@ -1,12 +1,12 @@
-import struct
-from time import sleep
+from typing import Any
 
 import serial
-from serial.serialutil import SerialTimeoutException
+
+from .funcs_aux import monta_pacote, processa_matricula, recebe_pacote
 
 
 class ProtocoloBase:
-    def __init__(self, port: str = "/dev/ttyS0"):
+    def __init__(self, port: str = "/dev/serial0"):
         self.ser = serial.Serial(
             port=port,
             baudrate=115200,
@@ -16,41 +16,35 @@ class ProtocoloBase:
             timeout=2,
         )
 
-    def comandoLeitura(self, cmd: int, matricula: int) -> int | float | str | None:
-        bytes_matricula = [int(digito) for digito in str(matricula)]
+    def comandoLeitura(self, cmd: int, matricula: str) -> Any | None:
+        matricula_bytes = processa_matricula(matricula)
+        if not matricula_bytes:
+            return None
 
-        if len(bytes_matricula) != 6:
-            print("[ERRO] Matrícula inválida")
-            return
+        cmd_byte = cmd + 0xA0
+        pacote = monta_pacote(None, None, cmd_byte, None, matricula_bytes, False)
 
-        recebido: bytes
-        resultado: int | float | str = ""
+        self.ser.write(pacote)
+        print(f"[OK] Comando de Leitura {hex(cmd_byte)}. Bytes: {pacote.hex(' ')}")
 
-        try:
-            self.ser.write(bytearray([cmd + 0xA0] + bytes_matricula))
-            print("[OK] Comando de Leitura Enviado")
+        (_, resultado) = recebe_pacote(cmd, self.ser)
 
-            sleep(0.25)
+        return resultado
 
-            match cmd:
-                case 1:
-                    recebido = self.ser.read(4)
-                    if len(recebido) > 0:
-                        resultado = int.from_bytes(recebido, "little")
-                case 2:
-                    recebido = self.ser.read(4)
-                    if len(recebido) > 0:
-                        resultado = struct.unpack("<f", recebido)[0]
-                case _:
-                    tamanho = self.ser.read(1)
-                    if len(tamanho) > 0:
-                        recebido = self.ser.read(int.from_bytes(tamanho, "little"))
-                        resultado = recebido.decode("utf-8")
+    def comandoEnvio(self, cmd: int, dados: Any, matricula: str) -> Any | None:
+        bytes_matricula = processa_matricula(matricula)
+        if not bytes_matricula:
+            return None
 
-            print(f"[OK] Mensagem recebida: {resultado}")
-            return resultado
-        except serial.SerialTimeoutException:
-            print("[ERRO] Timeout Detectado")
+        cmd_byte = cmd + 0xB0
+        pacote = monta_pacote(None, None, cmd_byte, dados, bytes_matricula, False)
+
+        self.ser.write(pacote)
+        print(f"[OK] Comando de Envio {hex(cmd_byte)}. Bytes: {pacote.hex(' ')}")
+
+        (_, resultado) = recebe_pacote(cmd, self.ser)
+
+        return resultado
 
     def finalizar(self):
         self.ser.close()
