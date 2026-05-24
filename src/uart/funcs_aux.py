@@ -93,6 +93,56 @@ def monta_pacote(
     return pacote
 
 
+def recebe_pacote_modbus(cmd: int, ser: Serial) -> tuple[bytes, int | float | str | None]:
+    resultado: int | float | str | None = None
+
+    header = ser.read(2)
+    if len(header) < 2:
+        print("[ERRO] Timeout ao receber header MODBUS.")
+        return (b"", None)
+
+    func = header[1]
+
+    if func & 0x80:
+        exc = ser.read(1)
+        crc_bytes = ser.read(2)
+        recebido = header + exc + crc_bytes
+        print(f"[ERRO] Resposta de erro MODBUS. Exceção: {exc.hex()}. Bytes: {recebido.hex(' ')}")
+        return (recebido, None)
+
+    payload = b""
+    match cmd:
+        case 1:
+            payload = ser.read(4)
+            if len(payload) == 4:
+                resultado = struct.unpack("<i", payload)[0]
+        case 2:
+            payload = ser.read(4)
+            if len(payload) == 4:
+                resultado = struct.unpack("<f", payload)[0]
+        case 3:
+            tamanho_b = ser.read(1)
+            if len(tamanho_b) == 1:
+                tamanho = int.from_bytes(tamanho_b, "little")
+                string_bytes = ser.read(tamanho)
+                if len(string_bytes) == tamanho:
+                    resultado = string_bytes.decode("utf-8")
+                payload = tamanho_b + string_bytes
+
+    crc_recebido = ser.read(2)
+    recebido = header + payload + crc_recebido
+
+    crc_calculado = calcula_crc(header + payload)
+    if bytearray(crc_recebido) != crc_calculado:
+        print(f"[ERRO] CRC inválido! Esperado: {crc_calculado.hex(' ')}, Recebido: {crc_recebido.hex(' ')}")
+        return (recebido, None)
+
+    print(f"[MODBUS] Bytes recebidos: {recebido.hex(' ')}")
+    print(f"[MODBUS] Mensagem decodificada: {resultado}")
+
+    return (recebido, resultado)
+
+
 def recebe_pacote(cmd: int, ser: Serial) -> tuple[bytes, int | float | str | None]:
     recebido: bytes = b""
     resultado: int | float | str | None = None
