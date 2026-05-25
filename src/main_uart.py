@@ -1,8 +1,19 @@
 from uart.base import ProtocoloBase
+from uart.modbus import ProtocoloMODBUS
 
 
 def main():
-    uart = ProtocoloBase()
+    print("[INPUT] Escolha o protocolo:")
+    print("  1 - Protocolo Simplificado")
+    print("  2 - MODBUS")
+    escolha = input().strip()
+
+    if escolha == "2":
+        uart = ProtocoloMODBUS()
+        print("[LOG] Usando protocolo MODBUS")
+    else:
+        uart = ProtocoloBase()
+        print("[LOG] Usando protocolo Simplificado")
 
     try:
         while True:
@@ -19,6 +30,10 @@ def main():
                 num_comando = int(comando[1])
             except ValueError:
                 print("[ERRO] O comando deve conter um número válido após a letra.")
+                continue
+
+            if num_comando not in [1, 2, 3]:
+                print("[ERRO] Comando deve ser 1, 2 ou 3.")
                 continue
 
             print("[INPUT] Digite a matrícula (6 dígitos):")

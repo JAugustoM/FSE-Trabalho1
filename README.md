@@ -14,8 +14,22 @@ pip install -r requirements.txt
 
 ## Execução
 
-Ainda no ambiente virtual criado na etapa anterior, execute o comando abaixo para rodar o sistema.
+### Semáforos (Entrega 1)
 
 ```sh
 python src/main.py
 ```
+
+Roda os dois modelos de semáforo simultaneamente (Modelo 1 — 3 LEDs e Modelo 2 — cruzamento completo).
+
+### UART (Entrega 2)
+
+```sh
+python src/main_uart.py
+```
+
+Ao iniciar, escolha o protocolo:
+- `1` — Protocolo Simplificado
+- `2` — MODBUS
+
+Em seguida, digite o comando no formato `A1`, `A2`, `A3`, `B1`, `B2` ou `B3`, a matrícula (6 dígitos) e o dado a enviar quando solicitado.
