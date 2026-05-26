@@ -110,6 +110,8 @@ def recebe_pacote_modbus(cmd: int, ser: Serial) -> tuple[bytes, int | float | st
         print(f"[ERRO] Resposta de erro MODBUS. Exceção: {exc.hex()}. Bytes: {recebido.hex(' ')}")
         return (recebido, None)
 
+    sub_cod = ser.read(1)
+
     payload = b""
     match cmd:
         case 1:
@@ -130,9 +132,9 @@ def recebe_pacote_modbus(cmd: int, ser: Serial) -> tuple[bytes, int | float | st
                 payload = tamanho_b + string_bytes
 
     crc_recebido = ser.read(2)
-    recebido = header + payload + crc_recebido
+    recebido = header + sub_cod + payload + crc_recebido
 
-    crc_calculado = calcula_crc(header + payload)
+    crc_calculado = calcula_crc(header + sub_cod + payload)
     if bytearray(crc_recebido) != crc_calculado:
         print(f"[ERRO] CRC inválido! Esperado: {crc_calculado.hex(' ')}, Recebido: {crc_recebido.hex(' ')}")
         return (recebido, None)
