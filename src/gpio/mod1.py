@@ -15,29 +15,25 @@ class SemaforoLEDs:
     def __init__(self):
         self._estado = None
         self.pedido_pedestre = False
-        threading.Thread(target=self._monitorar_botoes, daemon=True).start()
+        self._configurar_interrupcoes()
 
-    def _monitorar_botoes(self):
-        anterior_prin = GPIO.LOW
-        anterior_cruz = GPIO.LOW
+    def _configurar_interrupcoes(self):
+        GPIO.add_event_detect(
+            BOTP_M1, GPIO.RISING, callback=self._btn_principal_callback, bouncetime=300
+        )
+        GPIO.add_event_detect(
+            BOTC_M1, GPIO.RISING, callback=self._btn_cruzamento_callback, bouncetime=300
+        )
 
-        while True:
-            atual_prin = GPIO.input(BOTP_M1)
-            atual_cruz = GPIO.input(BOTC_M1)
+    def _btn_principal_callback(self, channel):
+        print("[M1] Botão Pedestre Principal pressionado!")
+        if self._estado == "verde":
+            self.pedido_pedestre = True
 
-            if atual_prin == GPIO.HIGH and anterior_prin == GPIO.LOW:
-                print("[M1] Botão Pedestre Principal pressionado!")
-                if self._estado == "verde":
-                    self.pedido_pedestre = True
-
-            if atual_cruz == GPIO.HIGH and anterior_cruz == GPIO.LOW:
-                print("[M1] Botão Pedestre Cruzamento pressionado!")
-                if self._estado == "verde":
-                    self.pedido_pedestre = True
-
-            anterior_prin = atual_prin
-            anterior_cruz = atual_cruz
-            sleep(0.05)
+    def _btn_cruzamento_callback(self, channel):
+        print("[M1] Botão Pedestre Cruzamento pressionado!")
+        if self._estado == "verde":
+            self.pedido_pedestre = True
 
     def _set_leds(self, verde, amarelo, vermelho):
         GPIO.output(LED0, verde)

@@ -1,4 +1,3 @@
-import threading
 from time import sleep, time
 
 import RPi.GPIO as GPIO
@@ -10,34 +9,30 @@ class SemaforoCruzamento:
     def __init__(self):
         self.pedido_ped_prin = False
         self.pedido_ped_cruz = False
+        self._estado_atual = None
+        self._configurar_interrupcoes()
 
-        self.thread_monitoramento = threading.Thread(
-            target=self.monitorar_botoes, daemon=True
-        ).start()
+    def _configurar_interrupcoes(self):
+        GPIO.add_event_detect(
+            BOTP_M2, GPIO.RISING, callback=self._btn_principal_callback, bouncetime=300
+        )
+        GPIO.add_event_detect(
+            BOTC_M2, GPIO.RISING, callback=self._btn_cruzamento_callback, bouncetime=300
+        )
 
-    def monitorar_botoes(self):
-        estado_anterior_prin = GPIO.LOW
-        estado_anterior_cruz = GPIO.LOW
+    def _btn_principal_callback(self, channel):
+        print("\n[M2] Botão Pedestre Principal pressionado!")
+        if self._estado_atual == 1:
+            self.pedido_ped_prin = True
 
-        while True:
-            estado_atual_prin = GPIO.input(BOTP_M2)
-            estado_atual_cruz = GPIO.input(BOTC_M2)
-
-            if estado_atual_prin == GPIO.HIGH and estado_anterior_prin == GPIO.LOW:
-                print("\n[M2] Botão Pedestre Principal pressionado!")
-                self.pedido_ped_prin = True
-
-            if estado_atual_cruz == GPIO.HIGH and estado_anterior_cruz == GPIO.LOW:
-                print("\n[M2] Botão Pedestre Cruzamento pressionado!")
-                self.pedido_ped_cruz = True
-
-            estado_anterior_prin = estado_atual_prin
-            estado_anterior_cruz = estado_atual_cruz
-
-            sleep(0.2)
+    def _btn_cruzamento_callback(self, channel):
+        print("\n[M2] Botão Pedestre Cruzamento pressionado!")
+        if self._estado_atual == 5:
+            self.pedido_ped_cruz = True
 
     def enviar_codigo_3bits(self, estado):
         """Converte o estado (número inteiro) em 3 bits e envia para os pinos GPIO."""
+        self._estado_atual = estado
         b0 = estado & 1
         b1 = (estado >> 1) & 1
         b2 = (estado >> 2) & 1
@@ -61,8 +56,8 @@ class SemaforoCruzamento:
     def executar_ciclo(self):
         while True:
             # ESTADO 1 (Verde Principal / Vermelho Cruzamento)
+            self.pedido_ped_prin = False
             self.enviar_codigo_3bits(1)
-            self.pedido_ped_cruz = False
             print("[M2] Via Principal: VERDE | Via Cruzamento: VERMELHO")
             sleep(10)
             self.esperar_tempo_variavel(10, lambda: self.pedido_ped_prin)
@@ -78,8 +73,8 @@ class SemaforoCruzamento:
             sleep(2)
 
             # ESTADO 5 (Vermelho Principal / Verde Cruzamento)
+            self.pedido_ped_cruz = False
             self.enviar_codigo_3bits(5)
-            self.pedido_ped_prin = False
             print("[M2] Via Principal: VERMELHO | Via Cruzamento: VERDE")
             sleep(5)
             self.esperar_tempo_variavel(5, lambda: self.pedido_ped_cruz)
