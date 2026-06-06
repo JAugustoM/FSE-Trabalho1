@@ -21,11 +21,15 @@ class ServidorCentral:
         self.estado = EstadoPersistente()
         self.interface = Interface(self)
 
-        self.tcp.on("contagem", self._handle_contagem)
+        self.tcp.on("telemetria", self._handle_telemetria)
         self.tcp.on("infracao", self._handle_infracao)
 
-    def _handle_contagem(self, msg: dict):
-        self.estado.atualizar_contagem(msg["cruzamento"], msg["sensores"])
+    def _handle_telemetria(self, msg: dict):
+        sensores = {
+            1: msg.get("sensor_1_count", 0),
+            2: msg.get("sensor_2_count", 0),
+        }
+        self.estado.atualizar_contagem(msg["cruzamento"], sensores)
 
     def _handle_infracao(self, msg: dict):
         cruzamento = msg["cruzamento"]
@@ -62,7 +66,7 @@ class ServidorCentral:
                     emergencia_anterior = False
                     self.estado.dados["emergencia_ativa"] = False
                     self.estado.salvar()
-                    self.tcp.broadcast({"tipo": "emergencia", "ativo": False, "signal_group": 0})
+                    self.tcp.broadcast({"comando": "normal"})
                     print("[MODBUS] Emergência encerrada — ciclo normal retomado")
 
             except Exception as e:
@@ -79,11 +83,12 @@ class ServidorCentral:
             f"intersection={estado.intersection_id} signal_group={estado.signal_group}"
         )
 
-        msg = {
-            "tipo": "emergencia",
-            "ativo": True,
-            "signal_group": estado.signal_group,
-        }
+        if estado.signal_group == 1:
+            comando = "emergencia_principal"
+        else:
+            comando = "emergencia_cruzamento"
+
+        msg = {"comando": comando}
 
         if estado.intersection_id == 0:
             self.tcp.broadcast(msg)
@@ -95,7 +100,7 @@ class ServidorCentral:
         threading.Thread(target=self._loop_modbus, daemon=True).start()
 
         if self.estado.dados["modo_noturno"]:
-            self.tcp.broadcast({"tipo": "modo_noturno", "ativo": False})
+            self.tcp.broadcast({"comando": "noturno"})
 
         self.interface.executar()
 

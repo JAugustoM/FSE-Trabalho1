@@ -76,7 +76,7 @@ class Interface:
                 noturno = not self.servidor.estado.dados["modo_noturno"]
                 self.servidor.estado.dados["modo_noturno"] = noturno
                 self.servidor.estado.salvar()
-                self.servidor.tcp.broadcast({"tipo": "modo_noturno", "ativo": noturno})
+                self.servidor.tcp.broadcast({"comando": "noturno" if noturno else "normal"})
                 print(f"[OK] Modo noturno {'ativado' if noturno else 'desativado'}")
                 input("Enter para continuar...")
             elif escolha == "2":
