@@ -12,7 +12,7 @@ class EstadoPersistente:
         self.dados = {
             "modo_noturno": False,
             "emergencia_ativa": False,
-            "contagens": {},
+            "sensores": {},
         }
         self._carregar()
 
@@ -29,8 +29,8 @@ class EstadoPersistente:
             with open(self.arquivo, "w") as f:
                 json.dump(self.dados, f, indent=2)
 
-    def atualizar_contagem(self, cruzamento: int, sensores: dict):
+    def atualizar_dados_sensores(self, sensores_dados: dict):
         with self._lock:
-            for sensor_id, count in sensores.items():
-                self.dados["contagens"][str(sensor_id)] = count
+            for s_id, info in sensores_dados.items():
+                self.dados["sensores"][str(s_id)] = info
         self.salvar()

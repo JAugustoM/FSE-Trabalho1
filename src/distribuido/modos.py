@@ -6,3 +6,4 @@ class Modo(Enum):
     NOITE = 2
     EMERGENCIA_PRINCIPAL = 3
     EMERGENCIA_CRUZAMENTO = 4
+    MANUAL = 5

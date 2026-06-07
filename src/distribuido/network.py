@@ -27,7 +27,6 @@ class TCPClient:
                 await asyncio.sleep(5)
 
     async def le_comandos(self):
-        """Aguarda ordens (Modo Noturno, Emergência) do Servidor Central"""
         while True:
             if not self.reader:
                 await asyncio.sleep(1)
@@ -42,9 +41,14 @@ class TCPClient:
                     continue
 
                 payload = json.loads(data.decode().strip())
+                tipo = payload.get("tipo")
                 comando = payload.get("comando")
 
-                if comando == "noturno":
+                if tipo == "semaforo_manual":
+                    codigo = payload.get("codigo")
+                    if codigo is not None:
+                        self.semaforo.set_codigo_manual(codigo)
+                elif comando == "noturno":
                     self.semaforo.modo = Modo.NOITE
                 elif comando == "emergencia_principal":
                     self.semaforo.modo = Modo.EMERGENCIA_PRINCIPAL
@@ -57,24 +61,24 @@ class TCPClient:
                 print(f"[TCP] Erro no listener: {e}")
 
     async def loop_telemetria(self):
-        """Envia contagem de veículos a cada 2 segundos"""
         while True:
             await asyncio.sleep(2)
             if not self.writer:
                 continue
 
-            s1_count, s2_count = self.sensores.reset_counts()
+            s1_count, s1_speed, s2_count, s2_speed = self.sensores.reset_counts()
             msg = {
                 "tipo": "telemetria",
                 "cruzamento": self.cruzamento_id,
                 "sensor_1_count": s1_count,
+                "sensor_1_avg_speed": s1_speed,
                 "sensor_2_count": s2_count,
+                "sensor_2_avg_speed": s2_speed,
             }
             self.writer.write((json.dumps(msg) + "\n").encode())
             await self.writer.drain()
 
     async def loop_alerta(self):
-        """Consome a fila de alertas (>60km/h) e envia imediatamente"""
         while True:
             alerta = await self.sensores.alert_queue.get()
             if self.writer:

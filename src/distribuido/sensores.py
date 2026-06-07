@@ -7,8 +7,8 @@ class SensorManager:
         self.hardware = hardware
         self.cruzamento_id = cruzamento_id
 
-        self.estado_s1 = {"tempo_a": [], "count": 0}
-        self.estado_s2 = {"tempo_a": [], "count": 0}
+        self.estado_s1 = {"tempo_a": [], "count": 0, "velocidades": []}
+        self.estado_s2 = {"tempo_a": [], "count": 0, "velocidades": []}
 
         self.alert_queue = asyncio.Queue()
 
@@ -30,6 +30,7 @@ class SensorManager:
 
         if 0 < dt < 2.0:
             velocidade_kmh = (2.0 / dt) * 3.6
+            estado_sensor["velocidades"].append(velocidade_kmh)
             print(
                 f"[Sensor {sensor_id}] Veículo detectado! v={velocidade_kmh:.1f} km/h"
             )
@@ -51,18 +52,36 @@ class SensorManager:
         self.estado_s1["tempo_a"].append(tempo_a)
 
     def _sensor1B(self, tempo_b):
-        self._processar_passagem(self.estado_s1, 1, tempo_b)
+        self._processar_passagem(
+            self.estado_s1, 1 + 2 * (self.cruzamento_id - 1), tempo_b
+        )
 
     def _sensor2A(self, tempo_a):
         self.estado_s2["tempo_a"].append(tempo_a)
 
     def _sensor2B(self, tempo_b):
-        self._processar_passagem(self.estado_s2, 2, tempo_b)
+        self._processar_passagem(
+            self.estado_s2, 2 + 2 * (self.cruzamento_id - 1), tempo_b
+        )
 
     def reset_counts(self):
-        """Retorna as contagens atuais e zera para o próximo ciclo de 2s"""
         s1 = self.estado_s1["count"]
         s2 = self.estado_s2["count"]
+
+        s1_speed = (
+            sum(self.estado_s1["velocidades"]) / len(self.estado_s1["velocidades"])
+            if self.estado_s1["velocidades"]
+            else 0.0
+        )
+        s2_speed = (
+            sum(self.estado_s2["velocidades"]) / len(self.estado_s2["velocidades"])
+            if self.estado_s2["velocidades"]
+            else 0.0
+        )
+
         self.estado_s1["count"] = 0
+        self.estado_s1["velocidades"] = []
         self.estado_s2["count"] = 0
-        return s1, s2
+        self.estado_s2["velocidades"] = []
+
+        return s1, s1_speed, s2, s2_speed

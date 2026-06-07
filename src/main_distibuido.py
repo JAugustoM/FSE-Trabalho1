@@ -4,11 +4,11 @@ import os
 
 from dotenv import load_dotenv
 
-from cruzamento.config import get_config
-from cruzamento.cruzamento import SemaforoCruzamento
-from cruzamento.hardware import HardwareController
-from cruzamento.network import TCPClient
-from cruzamento.sensores import SensorManager
+from distribuido.config import get_config
+from distribuido.cruzamento import SemaforoCruzamento
+from distribuido.hardware import HardwareController
+from distribuido.network import TCPClient
+from distribuido.sensores import SensorManager
 
 parser = argparse.ArgumentParser()
 parser.add_argument("cruzamento")

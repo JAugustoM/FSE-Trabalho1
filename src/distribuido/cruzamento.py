@@ -11,6 +11,7 @@ class SemaforoCruzamento:
         self._modo = None
         self._current_task = None
         self.id = id
+        self.codigo_manual = None
 
         self.loop = loop or asyncio.get_event_loop()
 
@@ -33,6 +34,10 @@ class SemaforoCruzamento:
             self._modo = new_modo
             self.on_modo_change(new_modo)
 
+    def set_codigo_manual(self, codigo: int):
+        self.codigo_manual = codigo
+        self.modo = Modo.MANUAL
+
     def on_modo_change(self, new_modo):
         if self._current_task and not self._current_task.done():
             self._current_task.cancel()
@@ -47,6 +52,8 @@ class SemaforoCruzamento:
                 coro = self.executar_ciclo_emerg_principal()
             case Modo.EMERGENCIA_CRUZAMENTO:
                 coro = self.executar_ciclo_emerg_cruzamento()
+            case Modo.MANUAL:
+                coro = self.executar_modo_manual()
 
         if coro:
             self._current_task = self.loop.create_task(coro)
@@ -65,49 +72,52 @@ class SemaforoCruzamento:
         passos = int(tempo_maximo / 0.1)
         for _ in range(passos):
             if checar_pedido():
-                print("[M2] Sinal verde interrompido pelo pedestre!")
+                print(f"[C{self.id}] Sinal verde interrompido pelo pedestre!")
                 break
             await asyncio.sleep(0.1)
+
+    async def executar_modo_manual(self):
+        try:
+            while True:
+                if self.codigo_manual is not None:
+                    self.hw.enviar_codigo_3bits(self.codigo_manual)
+                await asyncio.sleep(0.5)
+        except asyncio.CancelledError:
+            raise
 
     async def executar_ciclo_normal(self):
         try:
             while True:
-                # ESTADO 1 (Verde Principal / Vermelho Cruzamento)
                 self.pedido_ped_prin = False
                 self.hw.enviar_codigo_3bits(1)
                 print(f"\n[C{self.id}] Via Principal: VERDE | Via Cruzamento: VERMELHO")
                 await asyncio.sleep(15)
                 await self.esperar_tempo_variavel(15, lambda: self.pedido_ped_prin)
 
-                # ESTADO 2 (Amarelo Principal)
                 self.hw.enviar_codigo_3bits(2)
                 print(
                     f"\n[C{self.id}] Via Principal: AMARELO | Via Cruzamento: VERMELHO"
                 )
                 await asyncio.sleep(3)
 
-                # ESTADO 4 (Vermelho Total)
                 self.hw.enviar_codigo_3bits(4)
                 print(
                     f"\n[C{self.id}] Via Principal: VERMELHO | Via Cruzamento: VERMELHO"
                 )
                 await asyncio.sleep(2)
 
-                # ESTADO 5 (Vermelho Principal / Verde Cruzamento)
                 self.pedido_ped_cruz = False
                 self.hw.enviar_codigo_3bits(5)
                 print(f"\n[C{self.id}] Via Principal: VERMELHO | Via Cruzamento: VERDE")
                 await asyncio.sleep(5)
                 await self.esperar_tempo_variavel(5, lambda: self.pedido_ped_cruz)
 
-                # ESTADO 6 (Amarelo Cruzamento)
                 self.hw.enviar_codigo_3bits(6)
                 print(
                     f"\n[C{self.id}] Via Principal: VERMELHO | Via Cruzamento: AMARELO"
                 )
                 await asyncio.sleep(3)
 
-                # ESTADO 4 (Vermelho Total)
                 self.hw.enviar_codigo_3bits(4)
                 print(
                     f"\n[C{self.id}] Via Principal: VERMELHO | Via Cruzamento: VERMELHO"
