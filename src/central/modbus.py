@@ -93,7 +93,7 @@ class ModbusClient:
             return None
 
         return [
-            struct.unpack("<H", raw[3 + i * 2 : 5 + i * 2])[0] for i in range(count)
+            struct.unpack(">H", raw[3 + i * 2 : 5 + i * 2])[0] for i in range(count)
         ]
 
     def _parse_escrita_custom(self) -> bool:
@@ -169,7 +169,7 @@ class ModbusClient:
             regs = self.ler_registradores(addr, 0, 1)
 
             if regs is not None:
-                if regs[0] == 2 or regs[0] == 512:
+                if regs[0] == 2:
                     status_ok = True
                     break
                 if regs[0] == 3:  # 3 = Erro da câmera
